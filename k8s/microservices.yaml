@@ -1,0 +1,148 @@
+# User Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+      - name: user-service
+        image: your_dockerhub_user/ecom-user-service:latest
+        env:
+        - name: MONGO_URI
+          value: mongodb://mongodb:27017/userdb
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
+        ports:
+        - containerPort: 3001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  ports:
+  - port: 3001
+  selector:
+    app: user-service
+
+---
+# Product Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+      - name: product-service
+        image: your_dockerhub_user/ecom-product-service:latest
+        env:
+        - name: MONGO_URI
+          value: mongodb://mongodb:27017/productdb
+        ports:
+        - containerPort: 3002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  ports:
+  - port: 3002
+  selector:
+    app: product-service
+
+---
+# Order Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: your_dockerhub_user/ecom-order-service:latest
+        env:
+        - name: DB_USER
+          value: admin
+        - name: DB_PASSWORD
+          value: password
+        - name: DB_HOST
+          value: postgres
+        - name: DB_NAME
+          value: orderdb
+        - name: DB_PORT
+          value: "5432"
+        ports:
+        - containerPort: 3003
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  ports:
+  - port: 3003
+  selector:
+    app: order-service
+
+---
+# Payment Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: your_dockerhub_user/ecom-payment-service:latest
+        ports:
+        - containerPort: 3004
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+spec:
+  ports:
+  - port: 3004
+  selector:
+    app: payment-service

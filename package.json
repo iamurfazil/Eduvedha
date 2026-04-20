@@ -1,0 +1,16 @@
+{
+  "name": "e-commerce-platform",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently \"npm run start:gateway\" \"npm run start:user\" \"npm run start:product\" \"npm run start:order\" \"npm run start:payment\" \"npm run start:front\"",
+    "start:gateway": "cd api-gateway && npm start",
+    "start:user": "cd services/user-service && npm start",
+    "start:product": "cd services/product-service && npm start",
+    "start:order": "cd services/order-service && npm start",
+    "start:payment": "cd services/payment-service && npm start",
+    "start:front": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

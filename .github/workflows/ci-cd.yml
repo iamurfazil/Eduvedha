@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, frontend, services/order-service, services/payment-service, services/product-service, services/user-service]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          
+      - name: Install dependencies and build
+        working-directory: ./${{ matrix.service }}
+        run: |
+          npm ci || npm install
+          if [ -f "build" ]; then npm run build; fi
+
+  docker_build_push:
+    needs: build_and_test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: api-gateway
+            image: your_dockerhub_user/ecom-api-gateway
+          - service: frontend
+            image: your_dockerhub_user/ecom-frontend
+          - service: services/order-service
+            image: your_dockerhub_user/ecom-order-service
+          - service: services/payment-service
+            image: your_dockerhub_user/ecom-payment-service
+          - service: services/product-service
+            image: your_dockerhub_user/ecom-product-service
+          - service: services/user-service
+            image: your_dockerhub_user/ecom-user-service
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ matrix.image }}:latest,${{ matrix.image }}:${{ github.sha }}
+
+  # Note: The deployment stage would typically use kubectl or Helm to apply to EKS/GKE
+  # deploy_k8s:
+  #   needs: docker_build_push
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Deploy to Kubernetes
+  #       run: echo "Deployment step requires KUBECONFIG secrets to be configured."

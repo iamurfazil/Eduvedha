@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # -------------------------
+  # Databases & Infrastructure
+  # -------------------------
+  mongodb:
+    image: mongo:6.0
+    container_name: ecom_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - ecom_network
+
+  postgres:
+    image: postgres:15
+    container_name: ecom_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: orderdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecom_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecom_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ecom_network
+
+  # -------------------------
+  # Microservices
+  # -------------------------
+  user-service:
+    build: ./services/user-service
+    container_name: ecom_user_service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://mongodb:27017/userdb
+      - JWT_SECRET=super-secret-local-key
+    depends_on:
+      - mongodb
+    networks:
+      - ecom_network
+
+  product-service:
+    build: ./services/product-service
+    container_name: ecom_product_service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - MONGO_URI=mongodb://mongodb:27017/productdb
+    depends_on:
+      - mongodb
+    networks:
+      - ecom_network
+
+  order-service:
+    build: ./services/order-service
+    container_name: ecom_order_service
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - DB_USER=admin
+      - DB_PASSWORD=password
+      - DB_HOST=postgres
+      - DB_NAME=orderdb
+      - DB_PORT=5432
+    depends_on:
+      - postgres
+    networks:
+      - ecom_network
+
+  payment-service:
+    build: ./services/payment-service
+    container_name: ecom_payment_service
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+    networks:
+      - ecom_network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: ecom_api_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - USER_SERVICE_URL=http://user-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - ORDER_SERVICE_URL=http://order-service:3003
+      - PAYMENT_SERVICE_URL=http://payment-service:3004
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - payment-service
+    networks:
+      - ecom_network
+
+  frontend:
+    build: ./frontend
+    container_name: ecom_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - ecom_network
+
+networks:
+  ecom_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  postgres_data:
